@@ -1,7 +1,9 @@
-package com.acamillo.spark.etl
+package com.github.acamillo.sparketl
 
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.input_file_name
+import cats.effect.ExitCode
+import monix.eval.{Task, TaskApp}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder}
+import org.apache.spark.sql.functions.{col, input_file_name, udf}
 
 /**
   * In this object I put some business logic oriented combinators.
@@ -17,12 +19,9 @@ import org.apache.spark.sql.functions.input_file_name
   */
 object DSL {
 
-  import datastore.Writers._
   import datastore.Readers._
+  import datastore.Writers._
   import pipeline.Pipeline._
-
-  import org.apache.spark.sql.functions.{ col, udf }
-  import org.apache.spark.sql.{ DataFrame, Dataset, Encoder }
 
   /**
     * It partitions the dataset into `numberOfPartitions` before writing it,
@@ -33,15 +32,15 @@ object DSL {
     Writer(_.repartition(numberOfPartitions), identity)
 
   /**
-    * A business logic specific Writer constructor. It adds to the output whatever attributes it comes
-    * along the input dataset
+    * A business logic specific Writer constructor. It adds, to the output, whatever attributes it comes
+    * along the input dataset. We add the db shard name and then partition the ds on it.
     * @param rhs the dataset to join and add to the transformer.
     *
     * @tparam B
     * @return
     */
   def withLocation[B](rhs: Dataset[B]): Writer[B] = {
-    val addPartition: FrameWriter => FrameWriter = _.partitionBy("write_location")
+    val addPartition: FrameWriter => FrameWriter = _.partitionBy("shard_name")
     val addLocation: DataFrame => DataFrame =
       _.join(
         rhs.withColumnRenamed("account_id", "rhs-account_id"),
@@ -54,6 +53,14 @@ object DSL {
     )
   }
 
+  /**
+   * Adds a event timestamp to the dataframe. This might be useful for setting a ts for the
+   * last time a dataset has been manipulated.
+
+   * @param snapshots a map of time events keyed by account id
+   * @tparam B
+   * @return
+   */
   def withSnapshot[B](snapshots: Map[Long, Long]): Writer[B] = {
     val getSnapshotTime = udf { accountId: Long =>
       snapshots.getOrElse(accountId, 0L)
@@ -135,16 +142,16 @@ object DSL {
 
 }
 
-object Usage {
+object Usage extends TaskApp {
 
-  import datastore.Writers._
-  import datastore.Readers._
-  import pipeline.Pipeline._
-
-  import DSL._
-  import org.apache.spark.sql.{ DataFrame, Dataset }
   import java.sql.Timestamp
 
+  import DSL._
+  import datastore.Readers._
+  import datastore.Writers._
+  import pipeline.Pipeline._
+
+  import org.apache.spark.sql.SparkSession
   implicit val spark: SparkSession = ???
   import spark.implicits._
 
@@ -192,4 +199,7 @@ object Usage {
   val loader: Load = p3 to balanceSink
 
   loader.run()
+
+  // our main program
+  override def run(args: List[String]): Task[ExitCode] = ???
 }

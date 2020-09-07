@@ -22,7 +22,7 @@ object Writers {
         run = self.run andThen that.run,
         setter = self.setter andThen that.setter
       )
-    
+
     /**
       * Given a Writer it creates a DataWriter that expect a Dataset of A, applies the untyped transformation of the
       * Writer building a DataFrameWriter. It sets the DFM using the `setter` function and generate a DataWriter

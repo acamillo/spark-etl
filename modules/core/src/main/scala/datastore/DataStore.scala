@@ -13,7 +13,3 @@ trait DataWriter[F[_], T] extends Serializable {
 }
 
 trait DataReaderWriter[F[_], T] extends DataReader[F, T] with DataWriter[F, T]
-
-trait DataAppender[F[_], T] extends Serializable {
-  def append(ds: Dataset[T]): F[Unit]
-}

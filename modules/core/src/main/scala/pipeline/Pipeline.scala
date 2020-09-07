@@ -1,26 +1,18 @@
 package pipeline
 
-import com.acamillo.spark.etl.DataWriter
 import datastore.{DataReader, DataWriter}
 import monix.eval.Task
 import org.apache.spark.sql.{Column, Dataset, Encoder, SparkSession}
+
+trait Pipeline[+A] {
+  def run(): Task[A]
+}
 
 object Pipeline {
   type Job[A]               = Task[Dataset[A]]
   type Transformation[A, B] = Dataset[A] => Dataset[B]
   type Load                 = Pipeline[Unit]
 
-  trait Pipeline[+A] {
-    def run(): Task[A]
-  }
-
-//  /**
-//    * This is the final step of an ETL. It load data into a data sink
-//    * @param run
-//    */
-//  final case class Load(run: () => Task[Unit]) extends Pipeline [Unit] {}
-//  final case class Load(run: () => Task[Unit]){ self =>
-//  }
 
   /**
     * It models the Extraction part of an ETL pipeline
