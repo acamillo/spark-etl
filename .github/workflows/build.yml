@@ -1,0 +1,29 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: olafurpg/setup-scala@v2
+
+      - name: Cache SBT
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/coursier/v1
+            ~/.sbt
+          key: sbt-${{ hashFiles('**/build.sbt') }}
+
+      - name: Cache Ivy dependencies
+        uses: actions/cache@v1
+        with:
+          path: ~/.ivy2/cache
+          key: ${{ runner.os }}-${{ github.ref }}-ivy2
+          restore-keys: |
+           ${{ runner.os }}-${{ github.ref }}-ivy2
