@@ -15,7 +15,7 @@ linear pipelines which involve a single `Extract` source and `Load` sink. The `p
 such as the `Load` operation or an action (eg `count`). 
  
  
-A pipeline can as easy as a linear extraction - transformation - loading linear process
+A pipeline can be as easy as a linear extraction - transformation - loading linear process
 ```
 Extract source A ~> Transform A to B ~> Load B (sink 1)
 ```
@@ -61,34 +61,40 @@ sbt "examples/runMain com.github.acamillo.sparketl.Main"
 
 An ETL pipeline consists of the following building blocks:
 
+#### `DataReader[A]` ####
+This represents a data source that when evaluated returns a Spark Dataset of [A]
+
+#### `DataWriter[A]` ####
+This represents a data sink that when executed takes a Dataset of [A] and store it to a Spark destination.
+
 #### `Extract[A]` ####
-A producer of a single element of data whose type is `A`. This is the start of the ETL pipeline, you can connect this
-to `Transform`ers or to a `Load[A, AStatus]` to create an `ETLPipeline[AStatus]` that can be run.
+A producer of a single element of data whose type is a Spark Dataset of `[A]`. This is the start of the ETL pipeline, 
+you can connect this to `Transform`ers or to a `Load` to create an `Pipeline[A]` that can be run. Given a hypothetical 
+ data set of `Product` and data source `reader` we can easily create an `Extract[Product]` using the constructor `fromReader(reader)`.
+ ```scala 
+val productR = mkReader[Product] fromJson (List("/tmp/source/json/products/"))
+
+val extract = (fromReader(productR) orElse empty) >>> ensure(_.id != 200L)
+```
 
 #### `Transform[A, B]` ####
-A transformer of a an element `A` to `B` you can attach these after an `Extract[A]` or before a `Load[B]`
+A transformation of a Dataset from elements of type `A` to type `B` you can attach these after an `Extract[A]` or before a `Load`
 
-#### `Load[B, BStatus]` ####
-The end of the pipeline which takes data `B` flowing through the pipeline and consumes it and produces a status 
-`BStatus` which indicates whether consumption happens successfully
+#### `Load` ####
+The end of the pipeline which takes data produced by an `Extract[A]` and store them onto a data sink.
 
-#### `ETLPipeline[ConsumeStatus]` ####
-This represents the fully created ETL pipeline which can be executed using `unsafeRunSync()` to produce a 
-`ConsumeStatus` which indicates whether the pipeline has finished successfully.
+#### `Pipeline[A]` ####
+This represents the general outcome of a fully created ETL pipeline which can be executed using `run()` to produce an`A`.
+
 
 **Note:** At the end of the day, these building blocks are a reification of values and functions. You can build an 
-ETL pipeline out of functions and values but it helps to have a Domain Specific Language to increase readability.
+ETL pipeline out of functions and values, but it helps to have a Domain Specific Language to increase readability.
 
-
-- Use **[monix-jvm-app-template.g8](https://github.com/monix/monix-jvm-app-template.g8)**
-for quickly getting started with a Monix-driven app
-- See **[monix-sample](https://github.com/monix/monix-sample)** for
-a project exemplifying Monix used both on the server and on the client.
 
 ### Library dependency (sbt)
 
-For the stable release (compatible with Cats, and Cats-Effect 2.x):
+For the stable release (compatible with Monix 3.2.1 and Spark 2.4.6):
  
 ```scala
-libraryDependencies += "io.monix" %% "monix" % "3.2.2"
+libraryDependencies += "com.github.acamillo" %% "spark-etl" % ""
 ```

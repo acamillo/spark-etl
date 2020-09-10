@@ -1,8 +1,8 @@
 package com.github.acamillo.sparketl
 
-import datastore.Readers.{Reader, mkReader}
-import org.apache.spark.sql.functions.{input_file_name, udf}
+import etl.datastore.Reader
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions.{input_file_name, udf}
 
 object ReaderUsage {
 
@@ -22,8 +22,8 @@ object ReaderUsage {
   case class Brand(account_id: Long, id: Long)
 
   implicit val spark: SparkSession = ???
+  import Reader._
   import spark.implicits._
-
-  val jsonR = mkReader[Entity] + withAccountId("accounts") fromJson (List("/tmp/source/json/"))
+  val jsonR = mkReader[Entity] ++ withAccountId("accounts") fromJson (List("/tmp/source/json/"))
   val pqR   = mkReader[Brand] fromParquet (List("/tmp/source/json/"))
 }
