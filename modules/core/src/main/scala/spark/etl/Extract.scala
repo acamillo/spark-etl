@@ -1,6 +1,5 @@
-package etl.pipeline
+package spark.etl
 
-import etl.datastore.{DataReader, DataWriter}
 import monix.eval.Task
 import org.apache.spark.sql.catalyst.plans.{Inner, JoinType}
 import org.apache.spark.sql.{Column, Dataset, Encoder, SparkSession}
@@ -11,11 +10,11 @@ import org.apache.spark.sql.{Column, Dataset, Encoder, SparkSession}
 final case class Extract[A](run: () => Task[Dataset[A]]) { self =>
 
   /**
-   * Fall back operator. If this pipelines fails for any reasons it fall back to the other pipeline
-   * @param that
+   * Fall back operator. If this pipelines fails for any reasons it falls back to the other pipeline
+   * @param that the Extractor to return in case of failure
    * @return
    */
-  def orElse(that: =>Extract[A]): Extract[A] = Extract(() => run().onErrorFallbackTo(that.run()))
+  def orElse(that: => Extract[A]): Extract[A] = Extract(() => run().onErrorFallbackTo(that.run()))
 
   /**
    * Terminates the current pipeline chain of transformation create a data sink Loader.
@@ -40,13 +39,14 @@ final case class Extract[A](run: () => Task[Dataset[A]]) { self =>
    * @tparam B
    * @return
    */
-  def join[B](that: Extract[B], joinType: JoinType = Inner)(condition: (Dataset[A], Dataset[B]) => Column): Extract[(A, B)] =
-    Extract(
-      () =>
-        for {
-          lhs <- self.run()
-          rhs <- that.run()
-        } yield lhs.joinWith(rhs, condition(lhs, rhs), joinType.sql)
+  def joinWith[B](that: Extract[B], joinType: JoinType = Inner)(
+    condition: (Dataset[A], Dataset[B]) => Column
+  ): Extract[(A, B)] =
+    Extract(() =>
+      for {
+        lhs <- self.run()
+        rhs <- that.run()
+      } yield lhs.joinWith(rhs, condition(lhs, rhs), joinType.sql)
     )
 
   /**
@@ -64,7 +64,7 @@ final case class Extract[A](run: () => Task[Dataset[A]]) { self =>
   def ++[B](t: Transform[A, B]): Extract[B] = Extract(() => self.run().map(t.run))
 
   /**
-   * Handy operator for sequency dependent pipelines using legacy function transformation.
+   * Handy operator to sequence dependent pipelines using legacy function transformation.
    * It is useful in case we have a set of legacy combinators based on functions.
    *
    * @param t
@@ -75,6 +75,7 @@ final case class Extract[A](run: () => Task[Dataset[A]]) { self =>
 }
 
 object Extract {
+
   /**
    * Create an extract from a data source
    *

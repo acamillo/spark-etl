@@ -1,4 +1,4 @@
-package etl.pipeline
+package spark.etl
 
 import monix.eval.Task
 

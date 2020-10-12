@@ -2,7 +2,7 @@ lazy val Version = new {
   val scala = "2.12.12"
 
   val spark = "2.4.6"
-  val monix = "3.2.1"
+  val monix = "3.2.2"
 }
 
 lazy val appDependencies = Seq(
@@ -30,7 +30,7 @@ lazy val publishSettings = Seq(
   )
 )
 
-lazy val disablePublishSettings = Seq(
+lazy val noPublishSettings = Seq(
   skip in publish := true,
   publishArtifact := false
 )
@@ -57,7 +57,7 @@ lazy val examples = project
   .in(file("modules/examples"))
   .dependsOn(core)
   .settings(commonSettings)
-  .settings(disablePublishSettings)
+  .settings(noPublishSettings)
   .settings(
     name := "spark-etl-examples",
     libraryDependencies ++= Seq(
@@ -66,17 +66,33 @@ lazy val examples = project
       "io.monix"         %% "monix-eval" % Version.monix
     )
   )
+  .enablePlugins(MdocPlugin)
 
 lazy val root = project
   .in(file("."))
+  //  .aggregate(core, examples)
   .aggregate(core, examples)
-  .settings(disablePublishSettings)
+  .settings(commonSettings)
+  .settings(noPublishSettings)
   .settings(
     name := "spark-etl",
     addCommandAlias("checkFormat", ";scalafmtCheckAll;scalafmtSbtCheck"),
     addCommandAlias("format", ";scalafmtAll;scalafmtSbt"),
     addCommandAlias("build", ";checkFormat;clean;test")
   )
+
+// the documentation source folder is `docs`
+// the docs output folder is: etl-docs/target/mdoc/readme.md
+// see here for info: https://scalameta.org/mdoc/docs/installation.html#reference
+lazy val docs = project // new documentation project
+  .in(file("etl-docs")) // important: it must not be docs/
+  .settings(
+    mdocVariables := Map(
+      "VERSION" -> version.value
+    )
+  )
+  .dependsOn(root)
+  .enablePlugins(MdocPlugin)
 
 //lazy val root = project
 //  .in(file("."))
@@ -85,3 +101,10 @@ lazy val root = project
 //    libraryDependencies ++= appDependencies,
 //    mainClass           in (Compile, run) := Some("com.acamillo.spark.Main")
 //  )
+
+//lazy val microsite = project
+//  .in(file("examples"))
+//  .enablePlugins(MdocPlugin)
+//  .settings(commonSettings ++ noPublishSettings)
+////  .settings(siteSettings)
+//  .dependsOn(core)

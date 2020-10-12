@@ -1,4 +1,4 @@
-package etl.datastore
+package spark.etl
 
 import org.apache.spark.sql.Dataset
 
